@@ -130,6 +130,18 @@ export function localIsoDate(daysFromNow: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+export function isOverdue(
+  task: Pick<Task, "dueDate" | "status">,
+  today: string = localIsoDate(0),
+): boolean {
+  return (
+    task.dueDate !== null &&
+    task.dueDate < today &&
+    task.status !== "done" &&
+    task.status !== "canceled"
+  );
+}
+
 export const DUE_DATE_PRESETS: readonly [label: string, days: number][] = [
   ["Today", 0],
   ["Tomorrow", 1],

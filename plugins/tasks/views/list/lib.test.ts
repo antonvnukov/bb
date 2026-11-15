@@ -5,6 +5,7 @@ import {
   activeWorkLabel,
   formatDueDate,
   groupTasksByStatus,
+  isOverdue,
   labelFilterOptions,
   partitionLabels,
   selectedLabelIds,
@@ -159,5 +160,16 @@ describe("chipSummary", () => {
     expect(chipSummary(["Backlog", "Todo", "In Progress", "In Review"])).toBe(
       "Backlog, Todo +2",
     );
+  });
+});
+
+describe("isOverdue", () => {
+  it("flags open tasks past their due date only", () => {
+    const today = "2026-11-15";
+    expect(isOverdue({ dueDate: "2026-11-14", status: "todo" }, today)).toBe(true);
+    expect(isOverdue({ dueDate: "2026-11-15", status: "todo" }, today)).toBe(false);
+    expect(isOverdue({ dueDate: "2026-11-01", status: "done" }, today)).toBe(false);
+    expect(isOverdue({ dueDate: "2026-11-01", status: "canceled" }, today)).toBe(false);
+    expect(isOverdue({ dueDate: null, status: "todo" }, today)).toBe(false);
   });
 });

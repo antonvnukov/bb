@@ -8,7 +8,12 @@ import type {
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { TaskRowMeta } from "./data.js";
-import { activeWorkLabel, formatDueDate, partitionLabels } from "./lib.js";
+import {
+  activeWorkLabel,
+  formatDueDate,
+  isOverdue,
+  partitionLabels,
+} from "./lib.js";
 import type { EditFn } from "./property-menus.js";
 import {
   isBareKey,
@@ -182,7 +187,11 @@ export const TaskRow = memo(function TaskRow({
           {meta ? <ActiveChip threads={meta.activeThreads} /> : null}
           <LabelChips task={task} labelsById={labelsById} />
           {task.dueDate !== null ? (
-            <span className={`${RAIL_CHIP_CLASS} shrink-0 tabular-nums`}>
+            <span
+              data-overdue={isOverdue(task) || undefined}
+              title={isOverdue(task) ? "Overdue" : undefined}
+              className={`${RAIL_CHIP_CLASS} shrink-0 tabular-nums data-overdue:border-destructive/40 data-overdue:text-destructive`}
+            >
               <Icon name="Clock" className="size-3 shrink-0" />
               {formatDueDate(task.dueDate)}
             </span>
