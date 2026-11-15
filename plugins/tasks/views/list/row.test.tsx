@@ -181,6 +181,12 @@ describe("inline row editing", () => {
         ),
       ).toBe(true),
     );
+    fireEvent.click(
+      await waitFor(
+        () =>
+          slot.container.querySelector('[data-status-group-header="done"]')!,
+      ),
+    );
     await waitFor(() =>
       expect(
         within(
@@ -308,5 +314,30 @@ describe("list search and key column", () => {
     const key = await slot.findByText("AGENTS-223");
     expect(key.style.getPropertyValue("--key-w")).toBe("12ch");
     expect(key.title).toBe("AGENTS-223");
+  });
+
+  it("collapses closed groups by default and expands them on click", async () => {
+    const slot = renderList([
+      task({ id: "01HZT1ZZZZZZZZZZZZZZZZZZT1", number: 1, title: "Open work" }),
+      task({
+        id: "01HZT2ZZZZZZZZZZZZZZZZZZT2",
+        number: 2,
+        title: "Shipped",
+        status: "done",
+      }),
+    ]);
+    await rowFor(slot, "TSK-1");
+    const header = await waitFor(() => {
+      const found = slot.container.querySelector<HTMLButtonElement>(
+        '[data-status-group-header="done"]',
+      );
+      expect(found).not.toBeNull();
+      return found as HTMLButtonElement;
+    });
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    expect(slot.queryByText("TSK-2")).toBeNull();
+    fireEvent.click(header);
+    await slot.findByText("TSK-2");
+    expect(header.getAttribute("aria-expanded")).toBe("true");
   });
 });

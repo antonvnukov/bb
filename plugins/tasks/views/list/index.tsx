@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Label, Task } from "../../shared/contract.js";
+import type { Label, Task, TaskStatus } from "../../shared/contract.js";
 import { errorMessage } from "../../shared/errors.js";
 import { useProjects, useTasksRpc } from "../../shell/data.js";
 import { useTasksNavigation } from "../../shell/routes.js";
@@ -235,9 +235,24 @@ export function ListView({ projectId, activeOnly = false }: ListViewProps) {
     revision: tasksQuery.data?.length ?? 0,
   });
 
+  const [collapsed, setCollapsed] = useState<ReadonlySet<TaskStatus>>(
+    () => new Set<TaskStatus>(["done", "canceled"]),
+  );
+  const isCollapsed = (status: TaskStatus) =>
+    collapsed.has(status) && !filters.statuses.includes(status);
+  const toggleGroup = (status: TaskStatus) =>
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (isCollapsed(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+
   const viewport = useRowWindowViewport(scrollRef, groups);
   const ranges = rowWindows({
-    counts: groups.map((group) => group.tasks.length),
+    counts: groups.map((group) =>
+      isCollapsed(group.status) ? 0 : group.tasks.length,
+    ),
     headerHeight: viewport.headerHeight,
     rowHeight: viewport.rowHeight,
     scrollTop: viewport.scrollTop,
@@ -301,21 +316,30 @@ export function ListView({ projectId, activeOnly = false }: ListViewProps) {
     }
   } else {
     body = groups.map((group, groupIndex) => {
-      const [start, end] = ranges[groupIndex] ?? [0, group.tasks.length];
+      const groupCollapsed = isCollapsed(group.status);
+      const shown = groupCollapsed ? 0 : group.tasks.length;
+      const [start, end] = ranges[groupIndex] ?? [0, shown];
       const hiddenAbove = start * viewport.rowHeight;
-      const hiddenBelow = (group.tasks.length - end) * viewport.rowHeight;
+      const hiddenBelow = (shown - end) * viewport.rowHeight;
       return (
         <section key={group.status}>
-          <div
+          <button
+            type="button"
             data-status-group-header={group.status}
-            className="sticky top-0 z-20 isolate flex items-center gap-2 border-b border-border-hairline bg-background px-3.5 pb-1.5 pt-2.5 text-sm font-semibold"
+            aria-expanded={!groupCollapsed}
+            onClick={() => toggleGroup(group.status)}
+            className="sticky top-0 z-20 isolate flex w-full items-center gap-2 border-b border-border-hairline bg-background px-3.5 pb-1.5 pt-2.5 text-left text-sm font-semibold"
           >
             <StatusIcon status={group.status} />
             {STATUS_LABELS[group.status]}
             <span className="text-xs font-normal tabular-nums text-subtle-foreground">
               {group.tasks.length}
             </span>
-          </div>
+            <Icon
+              name={groupCollapsed ? "ChevronRight" : "ChevronDown"}
+              className="size-3.5 text-subtle-foreground"
+            />
+          </button>
           {hiddenAbove > 0 ? (
             <div aria-hidden style={{ height: hiddenAbove }} />
           ) : null}

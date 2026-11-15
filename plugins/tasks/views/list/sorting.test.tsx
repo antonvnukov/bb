@@ -98,6 +98,11 @@ function renderList() {
 
 async function rowOrder(slot: ReturnType<typeof renderList>) {
   await slot.findByText("TSK-1");
+  for (const header of slot.container.querySelectorAll(
+    '[data-status-group-header][aria-expanded="false"]',
+  )) {
+    fireEvent.click(header);
+  }
   const keys = Array.from(
     slot.container.querySelectorAll("[data-task-key]"),
   ).map((row) => row.getAttribute("data-task-key"));
