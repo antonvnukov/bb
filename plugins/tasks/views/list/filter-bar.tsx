@@ -37,6 +37,11 @@ function chipTriggerClass(active: boolean): string {
   );
 }
 
+export function chipSummary(names: readonly string[]): string {
+  if (names.length <= 2) return names.join(", ");
+  return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+}
+
 function FilterChip({
   icon,
   label,
@@ -57,7 +62,7 @@ function FilterChip({
           {label}
           {active ? (
             <span className="max-w-48 truncate font-medium @max-md:max-w-24">
-              {selectedNames.join(", ")}
+              {chipSummary(selectedNames)}
             </span>
           ) : null}
         </button>
@@ -183,9 +188,9 @@ export function ListFilterBar({
   const showLabelChip =
     labelOptions.length > 0 || filters.labelNames.length > 0;
   return (
-    <div className="flex shrink-0 items-center gap-1.5 border-b border-border-hairline px-3.5 py-1.5">
+    <div className="flex shrink-0 items-center gap-1.5 border-b border-border-hairline px-3.5 py-1.5 @md:flex-wrap">
       <SearchInput value={search} onChange={onSearchChange} />
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto @md:flex-wrap @md:overflow-visible">
         <FilterChip
           icon="Circle"
           label="Status"

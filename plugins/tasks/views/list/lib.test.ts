@@ -11,6 +11,7 @@ import {
 } from "./lib.js";
 import { makeTask } from "../../test-fixtures.js";
 import { keyColumnWidth } from "./data.js";
+import { chipSummary } from "./filter-bar.js";
 
 const ULID_A = "01ARZ3NDEKTSV4RRFFQ69G5FAA";
 const ULID_B = "01ARZ3NDEKTSV4RRFFQ69G5FAB";
@@ -148,5 +149,15 @@ describe("keyColumnWidth", () => {
   it("falls back to a character estimate when text cannot be measured", () => {
     expect(keyColumnWidth(withKeys("AGENTS-223"), () => null)).toBe("12ch");
     expect(keyColumnWidth(withKeys("AB-1"))).toBe("7ch");
+  });
+});
+
+describe("chipSummary", () => {
+  it("lists up to two names and counts the rest", () => {
+    expect(chipSummary([])).toBe("");
+    expect(chipSummary(["Todo", "Done"])).toBe("Todo, Done");
+    expect(chipSummary(["Backlog", "Todo", "In Progress", "In Review"])).toBe(
+      "Backlog, Todo +2",
+    );
   });
 });
