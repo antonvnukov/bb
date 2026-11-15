@@ -245,6 +245,53 @@ describe("task pager", () => {
   });
 });
 
+describe("task pager follows the list view", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("bb-tasks:list-preferences");
+  });
+
+  it("applies the saved status filter and sort", async () => {
+    window.localStorage.setItem(
+      "bb-tasks:list-preferences",
+      JSON.stringify({
+        version: 1,
+        scopes: {
+          [`project:${PROJECT_ID}`]: {
+            filters: { statuses: ["todo"], priorities: [], labelNames: [] },
+            sort: "priority",
+          },
+        },
+      }),
+    );
+    const tasks = [
+      pagerTask("TSK-3", "done", 1),
+      pagerTask("TSK-1", "in_progress", 1),
+      { ...pagerTask("TSK-2", "todo", 1), priority: "low" as const },
+      { ...pagerTask("TSK-4", "todo", 2), priority: "urgent" as const },
+    ];
+    const slot = renderSlot(
+      app.navPanels[0]!,
+      { subPath: "task/TSK-4" },
+      {
+        rpc: seededRpc({
+          listAllTasks: () => ({ tasks }),
+          listLabels: () => ({ labels: [] }),
+          listAttachments: () => ({ attachments: [] }),
+          listTaskThreads: () => ({ taskThreads: [] }),
+          listComments: () => ({ comments: [] }),
+        }),
+      },
+    );
+    await slot.findByText("1 / 2");
+    fireEvent.click(slot.getByRole("button", { name: "Next task" }));
+    expect(slot.navigateCalls).toContainEqual({
+      method: "toPluginPanel",
+      path: "tasks",
+      options: { subPath: "task/TSK-2" },
+    });
+  });
+});
+
 describe("tasks app shell", () => {
   it("recovers when the shell mounts during an existing outage", async () => {
     let serverAvailable = false;

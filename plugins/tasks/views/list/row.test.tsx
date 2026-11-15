@@ -303,6 +303,34 @@ describe("list search and key column", () => {
     expect(slot.getByText("TSK-2")).toBeTruthy();
   });
 
+  it("searches descriptions and subtasks on the server", async () => {
+    const slot = renderList([
+      task({ id: "01HZT1ZZZZZZZZZZZZZZZZZZT1", number: 1, title: "Fix login" }),
+      task({
+        id: "01HZT2ZZZZZZZZZZZZZZZZZZT2",
+        number: 2,
+        title: "Ship docs",
+        description: "mentions the webhook retry",
+      }),
+      task({
+        id: "01HZT3ZZZZZZZZZZZZZZZZZZT3",
+        number: 3,
+        title: "Child step",
+        parentTaskId: "01HZT1ZZZZZZZZZZZZZZZZZZT1",
+      }),
+    ]);
+    await rowFor(slot, "TSK-1");
+    expect(slot.queryByText("TSK-3")).toBeNull();
+    const search = slot.getByRole("searchbox", { name: "Search tasks" });
+    fireEvent.change(search, { target: { value: "webhook" } });
+    await slot.findByText("TSK-2");
+    await waitFor(() => expect(slot.queryByText("TSK-1")).toBeNull());
+    fireEvent.change(search, { target: { value: "tsk-3" } });
+    await slot.findByText("TSK-3");
+    fireEvent.keyDown(search, { key: "Escape" });
+    await slot.findByText("TSK-1");
+  });
+
   it("sizes the key column to the longest visible key", async () => {
     const slot = renderList([
       task({

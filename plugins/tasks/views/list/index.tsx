@@ -13,8 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   keyColumnWidth,
   measureKeyText,
-  matchesFilters,
-  matchesSearch,
+  visibleTasks,
   useLabels,
   useListTaskEdit,
   useListTasks,
@@ -30,10 +29,11 @@ import {
 import {
   listPreferenceScope,
   loadListPreference,
+  readListSearch,
+  rememberListSearch,
   storeListPreference,
   type ListPreference,
 } from "./list-preference.js";
-import { sortTasks } from "../../shared/sort.js";
 import type { TaskSort } from "../../shared/pagination.js";
 import { StatusIcon } from "./icons.js";
 import {
@@ -92,6 +92,7 @@ export function ListView({ projectId, activeOnly = false }: ListViewProps) {
   );
   useEffect(() => {
     setPreference(loadListPreference(preferenceScope));
+    setSearchState(readListSearch(preferenceScope));
   }, [preferenceScope]);
   const filters = preference.filters;
   const sort = preference.sort;
@@ -110,7 +111,23 @@ export function ListView({ projectId, activeOnly = false }: ListViewProps) {
     });
   };
   const [newTaskOpen, setNewTaskOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearchState] = useState(() =>
+    readListSearch(preferenceScope),
+  );
+  const setSearch = (next: string) => {
+    setSearchState(next);
+    rememberListSearch(preferenceScope, next);
+  };
+  const [serverSearch, setServerSearch] = useState(() => search.trim());
+  useEffect(() => {
+    const next = search.trim();
+    if (next === "") {
+      setServerSearch("");
+      return;
+    }
+    const timer = setTimeout(() => setServerSearch(next), 200);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const labelProjectIds = useMemo(
     () =>
@@ -134,6 +151,7 @@ export function ListView({ projectId, activeOnly = false }: ListViewProps) {
     statuses: filters.statuses,
     priorities: filters.priorities,
     labelIds,
+    search: serverSearch,
   });
   const meta = useTaskListMeta(projectId);
   const taskEdit = useListTaskEdit(tasksQuery.reads);
@@ -194,23 +212,30 @@ export function ListView({ projectId, activeOnly = false }: ListViewProps) {
 
   const displayTasks = useMemo(() => {
     if (tasksQuery.data === undefined) return undefined;
-    return tasksQuery.data.filter(
-      (task) =>
-        matchesFilters(
-          task,
-          filters.statuses,
-          filters.priorities,
-          labelIds ?? [],
-        ) && matchesSearch(task, search),
-    );
-  }, [tasksQuery.data, filters.statuses, filters.priorities, labelIds, search]);
+    return visibleTasks(tasksQuery.data, {
+      statuses: filters.statuses,
+      priorities: filters.priorities,
+      labelIds,
+      search,
+      serverSearch,
+      sort,
+    });
+  }, [
+    tasksQuery.data,
+    filters.statuses,
+    filters.priorities,
+    labelIds,
+    search,
+    serverSearch,
+    sort,
+  ]);
   const keyWidth = useMemo(
     () => keyColumnWidth(tasksQuery.data ?? [], measureKeyText),
     [tasksQuery.data],
   );
   const groups = useMemo(
-    () => groupTasksByStatus(sortTasks(displayTasks ?? [], sort)),
-    [displayTasks, sort],
+    () => groupTasksByStatus(displayTasks ?? []),
+    [displayTasks],
   );
 
   const showProject = projectId === null;

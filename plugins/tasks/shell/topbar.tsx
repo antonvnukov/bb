@@ -4,7 +4,21 @@ import {
   useRealtimeConnectionState,
 } from "@get-bb/plugin-sdk/app";
 import type { Project, Task } from "../shared/contract.js";
-import { groupTasksByStatus } from "../views/list/lib.js";
+import {
+  groupTasksByStatus,
+  labelFilterOptions,
+  selectedLabelIds,
+} from "../views/list/lib.js";
+import {
+  listTasksQuery,
+  useLabels,
+  visibleTasks,
+} from "../views/list/data.js";
+import {
+  listPreferenceScope,
+  loadListPreference,
+  readListSearch,
+} from "../views/list/list-preference.js";
 import { selectTasks, useTasksQuery } from "./data.js";
 import type { ResolvedTasksRoute, TaskViewMode, TasksRoute } from "./routes.js";
 import { Button } from "@/components/ui/button";
@@ -45,20 +59,59 @@ export function pagerPosition(
 function TaskPager({
   taskKey,
   projectId,
+  projects,
   onNavigate,
 }: {
   taskKey: string;
   projectId: string | null;
+  projects: Project[] | undefined;
   onNavigate: (route: TasksRoute) => void;
 }) {
+  const scope = listPreferenceScope(projectId, false);
+  const preference = useMemo(() => loadListPreference(scope), [scope]);
+  const search = readListSearch(scope).trim();
+  const labelProjectIds = useMemo(
+    () =>
+      projectId !== null
+        ? [projectId]
+        : (projects ?? []).map((project) => project.id),
+    [projectId, projects],
+  );
+  const labels = useLabels(labelProjectIds);
+  const labelIds = useMemo(() => {
+    if (preference.filters.labelNames.length === 0) return null;
+    if (labels.data === undefined) return null;
+    return selectedLabelIds(
+      labelFilterOptions(labels.data),
+      preference.filters.labelNames,
+    );
+  }, [preference.filters.labelNames, labels.data]);
   const siblings = useTasksQuery(
     "listAllTasks",
-    { ...(projectId === null ? {} : { projectId }), parentTaskId: null },
+    listTasksQuery(projectId, false, {
+      statuses: [],
+      priorities: [],
+      labelIds: null,
+      search,
+    }),
     selectTasks,
   );
   const position = useMemo(
-    () => (siblings.data ? pagerPosition(siblings.data, taskKey) : null),
-    [siblings.data, taskKey],
+    () =>
+      siblings.data
+        ? pagerPosition(
+            visibleTasks(siblings.data, {
+              statuses: preference.filters.statuses,
+              priorities: preference.filters.priorities,
+              labelIds,
+              search,
+              serverSearch: search,
+              sort: preference.sort,
+            }),
+            taskKey,
+          )
+        : null,
+    [siblings.data, preference, labelIds, search, taskKey],
   );
   if (!position) return null;
   const step = (key: string | null) => {
@@ -306,6 +359,7 @@ export function TasksTopbar({
           projectId={
             pagerScope !== null ? pagerScope.projectId : (project?.id ?? null)
           }
+          projects={projects}
           onNavigate={onNavigate}
         />
       ) : null}

@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
+import { sortTasks } from "../../shared/sort.js";
+import type { TaskSort } from "../../shared/pagination.js";
 import {
   experimental_useRpcKeyedQuery,
   experimental_useRpcMutation,
@@ -24,6 +26,7 @@ interface ListTaskFilters {
   statuses: readonly TaskStatus[];
   priorities: readonly TaskPriority[];
   labelIds: readonly string[] | null;
+  search?: string;
 }
 
 export interface TaskEdit {
@@ -53,6 +56,28 @@ export function matchesFilters(
     (statuses.length === 0 || statuses.includes(task.status)) &&
     (priorities.length === 0 || priorities.includes(task.priority)) &&
     (labelIds.length === 0 || task.labelIds.some((id) => labelIds.includes(id)))
+  );
+}
+
+export function visibleTasks(
+  tasks: readonly Task[],
+  view: {
+    statuses: readonly TaskStatus[];
+    priorities: readonly TaskPriority[];
+    labelIds: readonly string[] | null;
+    search: string;
+    serverSearch: string;
+    sort: TaskSort;
+  },
+): Task[] {
+  const searchPending = view.search.trim() !== view.serverSearch;
+  return sortTasks(
+    tasks.filter(
+      (task) =>
+        matchesFilters(task, view.statuses, view.priorities, view.labelIds ?? []) &&
+        (!searchPending || matchesSearch(task, view.search)),
+    ),
+    view.sort,
   );
 }
 
@@ -115,7 +140,9 @@ export function listTasksQuery(
       : {}),
     ...(filters.labelIds !== null ? { labelIds: [...filters.labelIds] } : {}),
     activeOnly,
-    parentTaskId: null,
+    ...(filters.search?.trim()
+      ? { search: filters.search.trim() }
+      : { parentTaskId: null }),
   };
 }
 

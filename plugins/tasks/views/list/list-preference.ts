@@ -148,6 +148,20 @@ function readStorage(): ParsedStorage | null {
   }
 }
 
+const sessionSearch = new Map<string, string>();
+
+export function readListSearch(scope: ListPreferenceScope): string {
+  return sessionSearch.get(scope) ?? "";
+}
+
+export function rememberListSearch(
+  scope: ListPreferenceScope,
+  search: string,
+): void {
+  if (search.trim() === "") sessionSearch.delete(scope);
+  else sessionSearch.set(scope, search);
+}
+
 export function loadListPreference(scope: ListPreferenceScope): ListPreference {
   const document = readStorage();
   if (document === null) {

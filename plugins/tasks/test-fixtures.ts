@@ -60,7 +60,17 @@ export function matchingTasks(tasks: readonly Task[], raw: unknown): Task[] {
       (typeof input.projectId !== "string" ||
         task.projectId === input.projectId) &&
       (input.parentTaskId === undefined ||
-        task.parentTaskId === input.parentTaskId),
+        task.parentTaskId === input.parentTaskId) &&
+      (typeof input.search !== "string" ||
+        input.search
+          .trim()
+          .toLowerCase()
+          .split(/\s+/)
+          .every((term) =>
+            [task.title, task.description ?? "", task.key].some((field) =>
+              field.toLowerCase().includes(term),
+            ),
+          )),
   );
 }
 
