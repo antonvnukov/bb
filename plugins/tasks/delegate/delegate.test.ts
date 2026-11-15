@@ -172,6 +172,42 @@ describe("task delegation", () => {
     await harness.dispose();
   });
 
+  it("keeps a status that changed while the thread was spawning", async () => {
+    let storeRef: ReturnType<typeof createStore> | undefined;
+    let taskId = "";
+    const { bb, harness } = createFakePluginHost({
+      pluginId: "tasks",
+      sdk: {
+        threads: {
+          spawn: async () => {
+            storeRef?.tasks.updateTask(taskId, { status: "done" });
+            return { id: "thr_late" };
+          },
+          get: async () => makeThreadResponse({ id: "thr_late" }),
+        },
+      },
+    });
+    const store = createStore(bb);
+    storeRef = store;
+    const project = store.tasks.createProject({
+      name: "Late delegation",
+      prefix: "LATE",
+      color: "blue",
+      linkedBbProjectId: "proj_bb",
+    });
+    taskId = store.tasks.createTask({
+      projectId: project.id,
+      title: "Closed during spawn",
+    }).id;
+    registerDelegation(bb, store);
+    const preset = createTestPreset(store);
+
+    await harness.callRpc("delegate", { taskId, presetId: preset.id });
+
+    expect(store.tasks.getTask(taskId)?.status).toBe("done");
+    await harness.dispose();
+  });
+
   it("bounds delegated thread titles by display width", async () => {
     const { bb, harness } = createFakePluginHost({
       pluginId: "tasks",

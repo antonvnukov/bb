@@ -346,7 +346,8 @@ export function handlers(
           liveStatus: "starting",
         });
 
-        if (task.status === "backlog" || task.status === "todo") {
+        const current = requireTask(store.tasks, task.id);
+        if (current.status === "backlog" || current.status === "todo") {
           store.tasks.updateTask(task.id, { status: "in_progress" });
           createSystemComment(store.tasks, {
             taskId: task.id,
